@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Betti Brillembourg</title>
+<meta name="description" content="Betti Brillembourg. Disc composition, 31 x 16 x 1.5 in. View it on your wall in augmented reality.">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a18;
+    --muted: #6b6b65;
+    --stage: #f3f3ef;
+    --btn-bg: #1a1a18;
+    --btn-fg: #ffffff;
+    --note-bg: #f6f3ea;
+    --note-fg: #5a4a22;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121211;
+      --fg: #eeede8;
+      --muted: #a09f98;
+      --stage: #1e1e1c;
+      --btn-bg: #eeede8;
+      --btn-fg: #121211;
+      --note-bg: #2a2619;
+      --note-fg: #e6d9a8;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 16px 40px;
+  }
+  header { margin-bottom: 18px; }
+  h1 {
+    margin: 0;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(1.75rem, 7vw, 2.4rem);
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    overflow-wrap: anywhere;
+  }
+  .dims {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  model-viewer {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 65vh;
+    background-color: var(--stage);
+    border-radius: 4px;
+  }
+  button[slot="ar-button"] {
+    position: absolute;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 32px);
+    min-height: 52px;
+    padding: 14px 26px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+  .how {
+    margin: 22px 0 0;
+  }
+  .how div + div { margin-top: 14px; }
+  .how p {
+    margin: 0;
+  }
+  .how p + p { margin-top: 4px; }
+  .ar-note {
+    margin: 18px 0 0;
+    padding: 12px 14px;
+    border-radius: 6px;
+    background: var(--note-bg);
+    color: var(--note-fg);
+    font-size: 0.95rem;
+  }
+  .ar-note span { display: block; }
+  .ar-note span + span { margin-top: 4px; }
+  .disclaimer {
+    margin: 22px 0 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .disclaimer span { display: block; }
+  .disclaimer span + span { margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Betti Brillembourg</h1>
+    <p class="dims">31 x 16 x 1.5 in (79 x 41 x 4 cm)</p>
+  </header>
+
+  <model-viewer
+    id="piece"
+    src="assets/betti-discs/model.glb"
+    ios-src="assets/betti-discs/model.usdz"
+    poster="assets/betti-discs/poster.jpg"
+    alt="Disc composition by Betti Brillembourg"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-placement="wall"
+    ar-scale="fixed"
+    camera-controls
+    shadow-intensity="1"
+    camera-orbit="-20deg 70deg auto">
+    <button type="button" slot="ar-button">Ver en mi pared · View on my wall</button>
+  </model-viewer>
+
+  <section class="how" aria-label="Instrucciones · Instructions">
+    <div lang="es">
+      <p>Abre esta página en tu teléfono, toca el botón y apunta la cámara a una pared.</p>
+      <p>Mueve el teléfono despacio hasta que aparezca la obra. Se muestra a tamaño real.</p>
+    </div>
+    <div lang="en">
+      <p>Open this page on your phone, tap the button and point the camera at a wall.</p>
+      <p>Move the phone slowly until the piece appears. It shows at real size.</p>
+    </div>
+  </section>
+
+  <p class="ar-note" id="ar-note" role="note" hidden>
+    <span lang="es">Para ver la obra en tu pared, abre este enlace desde un teléfono.</span>
+    <span lang="en">To see the piece on your wall, open this link on a phone.</span>
+  </p>
+
+  <p class="disclaimer">
+    <span lang="es">Vista previa aproximada: el grosor, los reflejos y los conectores de acrílico transparente no son exactos.</span>
+    <span lang="en">Approximate preview: thickness, reflections and the clear acrylic connectors are not exact.</span>
+  </p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var viewer = document.getElementById('piece');
+  var button = viewer.querySelector('button[slot="ar-button"]');
+  var note = document.getElementById('ar-note');
+
+  // canActivateAR is false on desktop browsers and when the script fails to load.
+  viewer.addEventListener('load', function () {
+    if (!viewer.canActivateAR) {
+      if (button) { button.hidden = true; }
+      note.hidden = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>
