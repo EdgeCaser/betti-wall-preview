@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Betti Brillembourg</title>
-<meta name="description" content="Betti Brillembourg. Disc composition, 31 x 16 x 1.5 in. View it on your wall in augmented reality.">
+<meta name="description" content="Betti Brillembourg. Works in augmented reality on your wall.">
 <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js"></script>
 <style>
   :root {
@@ -54,21 +54,97 @@
     letter-spacing: 0.01em;
     overflow-wrap: anywhere;
   }
+  .piece-title {
+    margin: 10px 0 0;
+    font-size: 1.1rem;
+    overflow-wrap: anywhere;
+  }
   .dims {
-    margin: 8px 0 0;
+    margin: 4px 0 0;
     color: var(--muted);
     font-size: 0.95rem;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
-  model-viewer {
+
+  .thumbs {
+    display: flex;
+    gap: 10px;
+    margin: 18px 0 14px;
+    padding: 4px 2px 6px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .thumb {
+    flex: 0 0 auto;
+    width: 84px;
+    height: 84px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--stage);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    cursor: pointer;
+  }
+  .thumb[aria-current="true"] { border-color: var(--fg); }
+  .thumb img {
     display: block;
-    position: relative;
     width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .thumb.thumb-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    text-align: center;
+  }
+
+  .stage {
+    position: relative;
     height: 65vh;
     background-color: var(--stage);
     border-radius: 4px;
+    overflow: hidden;
   }
+  .stage > model-viewer {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: var(--stage);
+  }
+  .stage.is-soon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stage .soon-poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .soon {
+    position: relative;
+    margin: 0;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--note-bg);
+    color: var(--note-fg);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+  }
+  .soon .sep { margin: 0 0.35em; font-weight: 400; }
+
   button[slot="ar-button"] {
     position: absolute;
     left: 50%;
@@ -122,24 +198,13 @@
 <main>
   <header>
     <h1>Betti Brillembourg</h1>
-    <p class="dims">31 x 16 x 1.5 in (79 x 41 x 4 cm)</p>
+    <p class="piece-title" id="piece-title"></p>
+    <p class="dims" id="piece-dims"></p>
   </header>
 
-  <model-viewer
-    id="piece"
-    src="assets/betti-discs/model.glb"
-    ios-src="assets/betti-discs/model.usdz"
-    poster="assets/betti-discs/poster.jpg"
-    alt="Disc composition by Betti Brillembourg"
-    ar
-    ar-modes="webxr scene-viewer quick-look"
-    ar-placement="wall"
-    ar-scale="fixed"
-    camera-controls
-    shadow-intensity="1"
-    camera-orbit="-20deg 70deg auto">
-    <button type="button" slot="ar-button">Ver en mi pared · View on my wall</button>
-  </model-viewer>
+  <nav class="thumbs" id="thumbs" aria-label="Obras · Pieces"></nav>
+
+  <div class="stage" id="stage"></div>
 
   <section class="how" aria-label="Instrucciones · Instructions">
     <div lang="es">
@@ -157,9 +222,9 @@
     <span lang="en">To see the piece on your wall, open this link on a phone.</span>
   </p>
 
-  <p class="disclaimer">
-    <span lang="es">Vista previa aproximada: el grosor, los reflejos y los conectores de acrílico transparente no son exactos.</span>
-    <span lang="en">Approximate preview: thickness, reflections and the clear acrylic connectors are not exact.</span>
+  <p class="disclaimer" id="piece-note">
+    <span lang="es" id="note-es"></span>
+    <span lang="en" id="note-en"></span>
   </p>
 </main>
 
@@ -167,17 +232,202 @@
 (function () {
   'use strict';
 
-  var viewer = document.getElementById('piece');
-  var button = viewer.querySelector('button[slot="ar-button"]');
+  var MODEL_VIEWER_ATTRS = {
+    'ar': '',
+    'ar-modes': 'webxr scene-viewer quick-look',
+    'ar-placement': 'wall',
+    'ar-scale': 'fixed',
+    'camera-controls': '',
+    'shadow-intensity': '1',
+    'camera-orbit': '-20deg 70deg auto'
+  };
+
+  var stage = document.getElementById('stage');
+  var thumbs = document.getElementById('thumbs');
+  var titleEl = document.getElementById('piece-title');
+  var dimsEl = document.getElementById('piece-dims');
+  var noteEs = document.getElementById('note-es');
+  var noteEn = document.getElementById('note-en');
   var note = document.getElementById('ar-note');
 
-  // canActivateAR is false on desktop browsers and when the script fails to load.
-  viewer.addEventListener('load', function () {
-    if (!viewer.canActivateAR) {
-      if (button) { button.hidden = true; }
-      note.hidden = false;
+  var pieces = [];
+  var token = 0; // guards against late file checks from an earlier selection
+
+  function assetUrl(slug, file) {
+    return 'assets/' + encodeURIComponent(slug) + '/' + file;
+  }
+
+  // Missing files come back as 404, so HEAD tells us what this piece has.
+  function exists(url) {
+    return fetch(url, { method: 'HEAD', cache: 'no-store' })
+      .then(function (r) { return r.ok; })
+      .catch(function () { return false; });
+  }
+
+  function findPiece(slug) {
+    for (var i = 0; i < pieces.length; i++) {
+      if (pieces[i].slug === slug) { return pieces[i]; }
     }
+    return null;
+  }
+
+  function slugFromUrl() {
+    try { return new URLSearchParams(location.search).get('p'); } catch (e) { return null; }
+  }
+
+  function setUrl(slug, push) {
+    try {
+      var url = new URL(location.href);
+      url.searchParams.set('p', slug);
+      if (push) {
+        history.pushState({ p: slug }, '', url.toString());
+      } else {
+        history.replaceState({ p: slug }, '', url.toString());
+      }
+    } catch (e) { /* URL update is optional */ }
+  }
+
+  function renderThumbs() {
+    thumbs.textContent = '';
+    pieces.forEach(function (piece) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'thumb';
+      btn.dataset.slug = piece.slug;
+      btn.setAttribute('aria-label', piece.title);
+
+      var img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.src = assetUrl(piece.slug, 'poster.jpg');
+      img.onerror = function () {
+        btn.classList.add('thumb-text');
+        btn.textContent = piece.title;
+      };
+      btn.appendChild(img);
+
+      btn.addEventListener('click', function () { select(piece.slug, true); });
+      thumbs.appendChild(btn);
+    });
+  }
+
+  function markThumbs(slug) {
+    var buttons = thumbs.querySelectorAll('.thumb');
+    for (var i = 0; i < buttons.length; i++) {
+      var on = buttons[i].dataset.slug === slug;
+      if (on) {
+        buttons[i].setAttribute('aria-current', 'true');
+      } else {
+        buttons[i].removeAttribute('aria-current');
+      }
+    }
+  }
+
+  function renderHeader(piece) {
+    titleEl.textContent = piece.title;
+    dimsEl.textContent = piece.dims_in + ' (' + piece.dims_cm + ')';
+    noteEs.textContent = piece.note_es || '';
+    noteEn.textContent = piece.note_en || '';
+  }
+
+  function showSoon(piece, hasPoster) {
+    stage.textContent = '';
+    stage.classList.add('is-soon');
+    if (hasPoster) {
+      var img = document.createElement('img');
+      img.className = 'soon-poster';
+      img.alt = '';
+      img.src = assetUrl(piece.slug, 'poster.jpg');
+      stage.appendChild(img);
+    }
+    var label = document.createElement('p');
+    label.className = 'soon';
+    label.innerHTML = '<span lang="es">Próximamente</span><span class="sep">/</span><span lang="en">Coming soon</span>';
+    stage.appendChild(label);
+  }
+
+  // Always builds a new model-viewer, so an earlier piece's ios-src never survives a switch.
+  function showViewer(piece, hasPoster, myToken) {
+    stage.textContent = '';
+    stage.classList.remove('is-soon');
+
+    var mv = document.createElement('model-viewer');
+    mv.id = 'piece';
+    mv.setAttribute('src', assetUrl(piece.slug, 'model.glb'));
+    mv.setAttribute('ios-src', assetUrl(piece.slug, 'model.usdz'));
+    if (hasPoster) { mv.setAttribute('poster', assetUrl(piece.slug, 'poster.jpg')); }
+    mv.setAttribute('alt', piece.title + ' by Betti Brillembourg');
+    Object.keys(MODEL_VIEWER_ATTRS).forEach(function (name) {
+      mv.setAttribute(name, MODEL_VIEWER_ATTRS[name]);
+    });
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.slot = 'ar-button';
+    button.textContent = 'Ver en mi pared · View on my wall';
+    mv.appendChild(button);
+
+    // canActivateAR is false on desktop browsers and when the script fails to load.
+    mv.addEventListener('load', function () {
+      if (!mv.canActivateAR) {
+        button.hidden = true;
+        note.hidden = false;
+      }
+    });
+    mv.addEventListener('error', function () {
+      if (myToken === token) { showSoon(piece, hasPoster); }
+    });
+
+    stage.appendChild(mv);
+  }
+
+  function select(slug, push) {
+    var piece = findPiece(slug) || pieces[0];
+    if (!piece) { return; }
+
+    var myToken = ++token;
+    renderHeader(piece);
+    markThumbs(piece.slug);
+    note.hidden = true;
+    stage.textContent = '';
+    stage.classList.remove('is-soon');
+    setUrl(piece.slug, !!push);
+
+    Promise.all([
+      exists(assetUrl(piece.slug, 'model.glb')),
+      exists(assetUrl(piece.slug, 'model.usdz')),
+      exists(assetUrl(piece.slug, 'poster.jpg'))
+    ]).then(function (found) {
+      if (myToken !== token) { return; }
+      var hasModel = found[0] && found[1];
+      if (hasModel) {
+        showViewer(piece, found[2], myToken);
+      } else {
+        showSoon(piece, found[2]);
+      }
+    });
+  }
+
+  window.addEventListener('popstate', function () {
+    select(slugFromUrl(), false);
   });
+
+  fetch('pieces.json', { cache: 'no-store' })
+    .then(function (r) {
+      if (!r.ok) { throw new Error('pieces.json ' + r.status); }
+      return r.json();
+    })
+    .then(function (data) {
+      pieces = (data && Array.isArray(data.pieces)) ? data.pieces : [];
+      if (!pieces.length) { throw new Error('no pieces'); }
+      renderThumbs();
+      select(slugFromUrl(), false);
+    })
+    .catch(function () {
+      stage.textContent = '';
+      showSoon({ slug: '' }, false);
+    });
 })();
 </script>
 </body>
